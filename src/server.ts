@@ -7,11 +7,11 @@ const server = fastify({ logger });
 
 server.register(authRoutes, { prefix: '/api/auth' });
 
-const start = () => {
+const start = async () => {
     try {
-        server.listen({ port: 3333 }, () => {
-            server.log.info(`Server listening on http://localhost:3333`);
-        });
+        const port = process.env.PORT ? parseInt(process.env.PORT) : 3333;
+        await server.listen({ port, host: '0.0.0.0' });
+        server.log.info(`Server listening on http://localhost:${port}`);
     } catch (err) {
         server.log.error(err);
         process.exit(1);

@@ -64,14 +64,20 @@ export const verifyToken = async (request: FastifyRequest, reply: FastifyReply) 
     
     if (!scriptVersion || scriptVersion !== latestVersion) {
         const files = await getAllFilesFromGithub(GITHUB_REPO_URL);
-        return reply.status(200).send({updateAvailable: true, latestVersion, files, message: 'Token is valid', tokenInfo: {
-            discordId: tokenData.discordId,
-            clientIp: tokenData.clientIp,
-            scriptName: tokenData.scriptName,
-            createdAt: tokenData.createdAt,
-            expirationDate: tokenData.expirationDate,
-            daysRemaining: daysRemaining,
-        }});
+        return reply.status(200).send({
+            updateAvailable: true, 
+            latestVersion, 
+            files, 
+            message: 'Token is valid', 
+            tokenInfo: {
+                discordId: tokenData.discordId,
+                clientIp: tokenData.clientIp,
+                scriptName: tokenData.scriptName,
+                createdAt: tokenData.createdAt,
+                expirationDate: tokenData.expirationDate,
+                daysRemaining: daysRemaining,
+            }
+        });
     }
 
     const response = {
@@ -119,6 +125,9 @@ async function getFilesFromGithub(folder: string, GITHUB_REPO_URL: string): Prom
 
     for (const file of response.data) {
         if (file.type === 'file' && file.name !== 'token.json' && !file.path.includes('shared/')) {
+            if (folder === 'web' && !file.name.endsWith('.html') && !file.name.endsWith('.js') && !file.name.endsWith('.css')) {
+                continue;
+            }
             const fileContentResponse = await axios.get(file.download_url, {
                 headers: {
                     Authorization: `token ${GITHUB_TOKEN}`

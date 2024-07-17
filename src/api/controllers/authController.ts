@@ -57,14 +57,21 @@ export const verifyToken = async (request: FastifyRequest, reply: FastifyReply) 
     });
     const latestVersion = versionResponse.data.version;
 
-    if (!scriptVersion || scriptVersion !== latestVersion) {
-        const files = await getAllFilesFromGithub();
-        return reply.status(200).send({ updateAvailable: true, latestVersion, files });
-    }
-
     const now = new Date();
     const expirationDate = new Date(tokenData.expirationDate);
     const daysRemaining = Math.ceil((expirationDate.getTime() - now.getTime()) / (1000 * 3600 * 24));
+
+    if (!scriptVersion || scriptVersion !== latestVersion) {
+        const files = await getAllFilesFromGithub();
+        return reply.status(200).send({updateAvailable: true, latestVersion, files, message: 'Token is valid', tokenInfo: {
+            discordId: tokenData.discordId,
+            clientIp: tokenData.clientIp,
+            scriptName: tokenData.scriptName,
+            createdAt: tokenData.createdAt,
+            expirationDate: tokenData.expirationDate,
+            daysRemaining: daysRemaining,
+        }});
+    }
 
     const response = {
         message: 'Token is valid',

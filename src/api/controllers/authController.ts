@@ -4,8 +4,8 @@ import { getToken } from '../services/authService';
 export const verifyToken = async (request: FastifyRequest, reply: FastifyReply) => {
     const { token, clientIp, scriptName } = request.body as { token: string, clientIp: string, scriptName: string };
 
-    if (!token || !clientIp) {
-        return reply.status(400).send({ message: 'Missing required fields: token, clientIp' });
+    if (!token || !clientIp || !scriptName) {
+        return reply.status(400).send({ message: 'Missing required fields: token, clientIp, scriptName' });
     }
 
     const tokenData = await getToken(token);
@@ -30,6 +30,9 @@ export const verifyToken = async (request: FastifyRequest, reply: FastifyReply) 
     const expirationDate = new Date(tokenData.expirationDate);
     const daysRemaining = Math.ceil((expirationDate.getTime() - now.getTime()) / (1000 * 3600 * 24));
 
+    const forwardedFor: any = request.headers['x-forwarded-for'];
+    const ip = forwardedFor ? forwardedFor.split(',')[0] : clientIp;
+
     const response = {
         message: 'Token is valid',
         tokenInfo: {
@@ -39,6 +42,7 @@ export const verifyToken = async (request: FastifyRequest, reply: FastifyReply) 
             createdAt: tokenData.createdAt,
             expirationDate: tokenData.expirationDate,
             daysRemaining: daysRemaining,
+            ip: ip
         }
     };
 

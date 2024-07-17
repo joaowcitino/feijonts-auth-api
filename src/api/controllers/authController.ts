@@ -7,7 +7,6 @@ if (process.env.NODE_ENV !== 'production') {
     dotenv.config();
 }
 
-const GITHUB_REPO_URL = 'https://api.github.com/repos/feijonts/bet_system/contents';
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
 interface FileStructure {
@@ -50,19 +49,21 @@ export const verifyToken = async (request: FastifyRequest, reply: FastifyReply) 
         return reply.status(401).send({ message: 'Invalid credentials: script name mismatch' });
     }
 
-    const versionResponse = await axios.get(`${GITHUB_REPO_URL}/version.json`, {
+    const GITHUB_REPO_URL = `https://api.github.com/repos/feijonts/${scriptName}/releases/latest`;
+
+    const versionResponse = await axios.get(GITHUB_REPO_URL, {
         headers: {
             Authorization: `token ${GITHUB_TOKEN}`
         }
     });
-    const latestVersion = versionResponse.data.version;
+    const latestVersion = versionResponse.data.tag_name;
 
     const now = new Date();
     const expirationDate = new Date(tokenData.expirationDate);
     const daysRemaining = Math.ceil((expirationDate.getTime() - now.getTime()) / (1000 * 3600 * 24));
 
     if (!scriptVersion || scriptVersion !== latestVersion) {
-        const files = await getAllFilesFromGithub();
+        const files = await getReleaseAssets(versionResponse.data.assets);
         return reply.status(200).send({updateAvailable: true, latestVersion, files, message: 'Token is valid', tokenInfo: {
             discordId: tokenData.discordId,
             clientIp: tokenData.clientIp,
@@ -88,44 +89,16 @@ export const verifyToken = async (request: FastifyRequest, reply: FastifyReply) 
     return reply.status(200).send(response);
 };
 
-async function getAllFilesFromGithub(): Promise<FileStructure> {
-    const folders = ['server', 'client', 'utils', 'web'];
+async function getReleaseAssets(assets: any[]): Promise<FileStructure> {
     const files: FileStructure = {};
-
-    for (const folder of folders) {
-        const folderFiles = await getFilesFromGithub(folder);
-        files[folder] = folderFiles;
+    for (const asset of assets) {
+        const response = await axios.get(asset.browser_download_url, {
+            headers: {
+                Authorization: `token ${GITHUB_TOKEN}`
+            },
+            responseType: 'arraybuffer'
+        });
+        files[asset.name] = response.data.toString('base64');
     }
-
-    const rootFiles = await getFilesFromGithub('');
-    for (const fileName in rootFiles) {
-        if (fileName !== 'token.json') {
-            files[fileName] = rootFiles[fileName];
-        }
-    }
-
-    return files;
-}
-
-async function getFilesFromGithub(folder: string): Promise<FileStructure> {
-    const url = folder ? `${GITHUB_REPO_URL}/${folder}` : GITHUB_REPO_URL;
-    const response = await axios.get(url, {
-        headers: {
-            Authorization: `token ${GITHUB_TOKEN}`
-        }
-    });
-    const files: FileStructure = {};
-
-    for (const file of response.data) {
-        if (file.type === 'file' && file.name !== 'token.json' && !file.path.includes('shared/')) {
-            const fileContentResponse = await axios.get(file.download_url, {
-                headers: {
-                    Authorization: `token ${GITHUB_TOKEN}`
-                }
-            });
-            files[file.name] = fileContentResponse.data;
-        }
-    }
-
     return files;
 }

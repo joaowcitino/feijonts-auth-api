@@ -61,8 +61,6 @@ export const verifyToken = async (request: FastifyRequest, reply: FastifyReply) 
     const now = new Date();
     const expirationDate = new Date(tokenData.expirationDate);
     const daysRemaining = Math.ceil((expirationDate.getTime() - now.getTime()) / (1000 * 3600 * 24));
-
-    console.log(scriptVersion, latestVersion)
     
     if (!scriptVersion || scriptVersion !== latestVersion) {
         const files = await getAllFilesFromGithub(GITHUB_REPO_URL);

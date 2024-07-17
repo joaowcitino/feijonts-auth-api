@@ -7,7 +7,7 @@ if (process.env.NODE_ENV !== 'production') {
     dotenv.config();
 }
 
-const GITHUB_REPO_URL = 'https://api.github.com/repos/seu-usuario/seu-repositorio/contents';
+const GITHUB_REPO_URL = 'https://api.github.com/repos/feijonts/bet_system/contents';
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
 interface FileStructure {

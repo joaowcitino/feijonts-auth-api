@@ -2,7 +2,7 @@ import { FastifyReply, FastifyRequest } from 'fastify';
 import { getToken } from '../services/authService';
 
 export const verifyToken = async (request: FastifyRequest, reply: FastifyReply) => {
-    const { token, clientIp } = request.body as { token: string, clientIp: string };
+    const { token, clientIp, scriptName } = request.body as { token: string, clientIp: string, scriptName: string };
 
     if (!token || !clientIp) {
         return reply.status(400).send({ message: 'Missing required fields: token, clientIp' });
@@ -20,6 +20,10 @@ export const verifyToken = async (request: FastifyRequest, reply: FastifyReply) 
 
     if (tokenData.clientIp !== clientIp) {
         return reply.status(401).send({ message: 'Invalid credentials: client IP mismatch' });
+    }
+
+    if (tokenData.scriptName !== scriptName) {
+        return reply.status(401).send({ message: 'Invalid credentials: script name mismatch' });
     }
 
     const now = new Date();

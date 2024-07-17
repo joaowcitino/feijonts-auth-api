@@ -50,24 +50,34 @@ export const verifyToken = async (request: FastifyRequest, reply: FastifyReply) 
         return reply.status(401).send({ message: 'Invalid credentials: script name mismatch' });
     }
 
-    const GITHUB_REPO_URL = `https://github.com/feijonts/bet_system/releases/download/v1.0.0/bet_system.zip`;
+    const GITHUB_REPO_URL = `https://api.github.com/repos/feijonts/bet_system/releases/assets/latest`;
 
     try {
         const versionResponse = await axios.get(GITHUB_REPO_URL, {
             headers: {
-                Authorization: `token ${GITHUB_TOKEN}`
+                Authorization: `token ${GITHUB_TOKEN}`,
+                Accept: 'application/vnd.github.v3+json'
+            }
+        });
+
+        const latestVersion = versionResponse.data.tag_name;
+
+        const assetUrl = versionResponse.data.assets.find((asset: any) => asset.name === 'bet_system.zip').url;
+
+        const assetResponse = await axios.get(assetUrl, {
+            headers: {
+                Authorization: `token ${GITHUB_TOKEN}`,
+                Accept: 'application/octet-stream'
             },
             responseType: 'arraybuffer'
         });
-
-        const latestVersion = "v1.0.0"; // Atualize conforme a versão da release
 
         const now = new Date();
         const expirationDate = new Date(tokenData.expirationDate);
         const daysRemaining = Math.ceil((expirationDate.getTime() - now.getTime()) / (1000 * 3600 * 24));
 
         if (!scriptVersion || scriptVersion !== latestVersion) {
-            const files = await getFilesFromZip(versionResponse.data);
+            const files = await getFilesFromZip(assetResponse.data);
             return reply.status(200).send({
                 updateAvailable: true,
                 latestVersion,

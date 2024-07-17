@@ -50,19 +50,24 @@ export const verifyToken = async (request: FastifyRequest, reply: FastifyReply) 
         return reply.status(401).send({ message: 'Invalid credentials: script name mismatch' });
     }
 
-    const GITHUB_REPO_URL = `https://api.github.com/repos/feijonts/bet_system/releases/assets/latest`;
+    const GITHUB_RELEASE_URL = `https://api.github.com/repos/feijonts/bet_system/releases/latest`;
 
     try {
-        const versionResponse = await axios.get(GITHUB_REPO_URL, {
+        const releaseResponse = await axios.get(GITHUB_RELEASE_URL, {
             headers: {
                 Authorization: `token ${GITHUB_TOKEN}`,
                 Accept: 'application/vnd.github.v3+json'
             }
         });
 
-        const latestVersion = versionResponse.data.tag_name;
+        const latestVersion = releaseResponse.data.tag_name;
+        const asset = releaseResponse.data.assets.find((asset: any) => asset.name === 'bet_system.zip');
 
-        const assetUrl = versionResponse.data.assets.find((asset: any) => asset.name === 'bet_system.zip').url;
+        if (!asset) {
+            throw new Error('Asset not found in the latest release');
+        }
+
+        const assetUrl = asset.url;
 
         const assetResponse = await axios.get(assetUrl, {
             headers: {

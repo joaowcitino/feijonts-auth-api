@@ -2,7 +2,6 @@ import { FastifyReply, FastifyRequest } from 'fastify';
 import { getToken } from '../services/authService';
 import axios from 'axios';
 import dotenv from 'dotenv';
-import JSZip from 'jszip';
 
 if (process.env.NODE_ENV !== 'production') {
     dotenv.config();
@@ -50,85 +49,84 @@ export const verifyToken = async (request: FastifyRequest, reply: FastifyReply) 
         return reply.status(401).send({ message: 'Invalid credentials: script name mismatch' });
     }
 
-    const GITHUB_RELEASE_URL = `https://api.github.com/repos/feijonts/bet_system/releases/latest`;
+    const GITHUB_REPO_URL = `https://api.github.com/repos/feijonts/${scriptName}/contents`;
 
-    try {
-        const releaseResponse = await axios.get(GITHUB_RELEASE_URL, {
-            headers: {
-                Authorization: `token ${GITHUB_TOKEN}`,
-                Accept: 'application/vnd.github.v3+json'
-            }
-        });
-
-        const latestVersion = releaseResponse.data.tag_name;
-        const asset = releaseResponse.data.assets.find((asset: any) => asset.name === 'bet_system.zip');
-
-        if (!asset) {
-            throw new Error('Asset not found in the latest release');
+    const versionResponse = await axios.get(`${GITHUB_REPO_URL}/version.json`, {
+        headers: {
+            Authorization: `token ${GITHUB_TOKEN}`
         }
+    });
+    const latestVersion = versionResponse.data.version;
 
-        const assetUrl = asset.url;
+    const now = new Date();
+    const expirationDate = new Date(tokenData.expirationDate);
+    const daysRemaining = Math.ceil((expirationDate.getTime() - now.getTime()) / (1000 * 3600 * 24));
 
-        const assetResponse = await axios.get(assetUrl, {
-            headers: {
-                Authorization: `token ${GITHUB_TOKEN}`,
-                Accept: 'application/octet-stream'
-            },
-            responseType: 'arraybuffer'
-        });
-
-        const now = new Date();
-        const expirationDate = new Date(tokenData.expirationDate);
-        const daysRemaining = Math.ceil((expirationDate.getTime() - now.getTime()) / (1000 * 3600 * 24));
-
-        if (!scriptVersion || scriptVersion !== latestVersion) {
-            const files = await getFilesFromZip(assetResponse.data);
-            return reply.status(200).send({
-                updateAvailable: true,
-                latestVersion,
-                files,
-                message: 'Token is valid',
-                tokenInfo: {
-                    discordId: tokenData.discordId,
-                    clientIp: tokenData.clientIp,
-                    scriptName: tokenData.scriptName,
-                    createdAt: tokenData.createdAt,
-                    expirationDate: tokenData.expirationDate,
-                    daysRemaining: daysRemaining,
-                }
-            });
-        }
-
-        const response = {
-            message: 'Token is valid',
-            tokenInfo: {
-                discordId: tokenData.discordId,
-                clientIp: tokenData.clientIp,
-                scriptName: tokenData.scriptName,
-                createdAt: tokenData.createdAt,
-                expirationDate: tokenData.expirationDate,
-                daysRemaining: daysRemaining,
-            }
-        };
-
-        return reply.status(200).send(response);
-
-    } catch (error) {
-        console.error(error);
-        return reply.status(500).send({ message: 'Error downloading or processing the release file.' });
+    if (!scriptVersion || scriptVersion !== latestVersion) {
+        const files = await getAllFilesFromGithub(GITHUB_REPO_URL);
+        return reply.status(200).send({updateAvailable: true, latestVersion, files, message: 'Token is valid', tokenInfo: {
+            discordId: tokenData.discordId,
+            clientIp: tokenData.clientIp,
+            scriptName: tokenData.scriptName,
+            createdAt: tokenData.createdAt,
+            expirationDate: tokenData.expirationDate,
+            daysRemaining: daysRemaining,
+        }});
     }
+
+    const response = {
+        message: 'Token is valid',
+        tokenInfo: {
+            discordId: tokenData.discordId,
+            clientIp: tokenData.clientIp,
+            scriptName: tokenData.scriptName,
+            createdAt: tokenData.createdAt,
+            expirationDate: tokenData.expirationDate,
+            daysRemaining: daysRemaining,
+        }
+    };
+
+    return reply.status(200).send(response);
 };
 
-async function getFilesFromZip(zipData: ArrayBuffer): Promise<FileStructure> {
-    const zip = await JSZip.loadAsync(zipData);
+async function getAllFilesFromGithub(GITHUB_REPO_URL: string): Promise<FileStructure> {
+    const folders = ['server', 'client', 'utils', 'web'];
     const files: FileStructure = {};
 
-    await Promise.all(Object.keys(zip.files).map(async (filename) => {
-        if (!filename.includes('shared/') && filename !== 'token.json') {
-            const fileContent = await zip.files[filename].async('string');
-            files[filename] = Buffer.from(fileContent).toString('base64');
+    for (const folder of folders) {
+        const folderFiles = await getFilesFromGithub(folder, GITHUB_REPO_URL);
+        files[folder] = folderFiles;
+    }
+
+    const rootFiles = await getFilesFromGithub('', GITHUB_REPO_URL);
+    for (const fileName in rootFiles) {
+        if (fileName !== 'token.json') {
+            files[fileName] = rootFiles[fileName];
         }
-    }));
+    }
+
+    return files;
+}
+
+async function getFilesFromGithub(folder: string, GITHUB_REPO_URL: string): Promise<FileStructure> {
+    const url = folder ? `${GITHUB_REPO_URL}/${folder}` : GITHUB_REPO_URL;
+    const response = await axios.get(url, {
+        headers: {
+            Authorization: `token ${GITHUB_TOKEN}`
+        }
+    });
+    const files: FileStructure = {};
+
+    for (const file of response.data) {
+        if (file.type === 'file' && file.name !== 'token.json' && !file.path.includes('shared/')) {
+            const fileContentResponse = await axios.get(file.download_url, {
+                headers: {
+                    Authorization: `token ${GITHUB_TOKEN}`
+                }
+            });
+            files[file.name] = fileContentResponse.data;
+        }
+    }
 
     return files;
 }

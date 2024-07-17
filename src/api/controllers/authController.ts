@@ -30,8 +30,6 @@ export const verifyToken = async (request: FastifyRequest, reply: FastifyReply) 
     const expirationDate = new Date(tokenData.expirationDate);
     const daysRemaining = Math.ceil((expirationDate.getTime() - now.getTime()) / (1000 * 3600 * 24));
 
-    const clientIp2 = request.ip;
-
     const response = {
         message: 'Token is valid',
         tokenInfo: {
@@ -41,7 +39,6 @@ export const verifyToken = async (request: FastifyRequest, reply: FastifyReply) 
             createdAt: tokenData.createdAt,
             expirationDate: tokenData.expirationDate,
             daysRemaining: daysRemaining,
-            ip: clientIp2
         }
     };
 

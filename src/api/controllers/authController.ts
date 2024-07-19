@@ -133,7 +133,7 @@ async function getFilesFromGithub(folder: string, GITHUB_REPO_URL: string): Prom
             file.type === 'file' &&
             fileName !== 'token.json' &&
             !filePath.includes('shared/') &&
-            !(filePath.includes('lib/') && (fileName === 'logs.lua' || fileName === 'functions.lua'))
+            !(filePath.includes('utils/') && (fileName === 'logs.lua' || fileName === 'functions.lua'))
         ) {
             if (folder === 'web' && !fileName.endsWith('.html') && !fileName.endsWith('.js') && !fileName.endsWith('.css')) {
                 continue;

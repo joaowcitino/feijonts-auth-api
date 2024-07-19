@@ -127,6 +127,8 @@ async function getFilesFromGithub(folder: string, GITHUB_REPO_URL: string): Prom
         const filePath = file.path;
         const fileName = file.name;
 
+        console.log(filePath, fileName);
+
         if (
             file.type === 'file' &&
             fileName !== 'token.json' &&

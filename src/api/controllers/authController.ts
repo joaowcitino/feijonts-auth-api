@@ -124,8 +124,16 @@ async function getFilesFromGithub(folder: string, GITHUB_REPO_URL: string): Prom
     const files: FileStructure = {};
 
     for (const file of response.data) {
-        if (file.type === 'file' && file.name !== 'token.json' && !file.path.includes('shared/')) {
-            if (folder === 'web' && !file.name.endsWith('.html') && !file.name.endsWith('.js') && !file.name.endsWith('.css')) {
+        const filePath = file.path;
+        const fileName = file.name;
+
+        if (
+            file.type === 'file' &&
+            fileName !== 'token.json' &&
+            !filePath.includes('shared/') &&
+            !(filePath.includes('lib/') && (fileName === 'logs.lua' || fileName === 'functions.lua'))
+        ) {
+            if (folder === 'web' && !fileName.endsWith('.html') && !fileName.endsWith('.js') && !fileName.endsWith('.css')) {
                 continue;
             }
             const fileContentResponse = await axios.get(file.download_url, {
@@ -133,7 +141,7 @@ async function getFilesFromGithub(folder: string, GITHUB_REPO_URL: string): Prom
                     Authorization: `token ${GITHUB_TOKEN}`
                 }
             });
-            files[file.name] = fileContentResponse.data;
+            files[fileName] = fileContentResponse.data;
         }
     }
 

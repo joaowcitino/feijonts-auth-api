@@ -51,12 +51,9 @@ export const verifyToken = async (request: FastifyRequest, reply: FastifyReply) 
 
     const GITHUB_REPO_URL = `https://api.github.com/repos/feijonts/${scriptName}/contents`;
 
-    const versionResponse = await axios.get(`${GITHUB_REPO_URL}/version.json`, {
-        headers: {
-            Authorization: `token ${GITHUB_TOKEN}`
-        }
-    });
-    const latestVersion = versionResponse.data.version;
+    const latestVersion = await getScriptVersion(GITHUB_REPO_URL);
+
+    console.log(scriptVersion, latestVersion);
 
     const now = new Date();
     const expirationDate = new Date(tokenData.expirationDate);
@@ -148,4 +145,29 @@ async function getFilesFromGithub(folder: string, GITHUB_REPO_URL: string): Prom
     }
 
     return files;
+}
+
+
+async function getScriptVersion(GITHUB_REPO_URL: string): Promise<string> {
+    const url = `${GITHUB_REPO_URL}/version.json`;
+    try {
+        const response = await axios.get(url, {
+            headers: {
+                Authorization: `token ${GITHUB_TOKEN}`
+            }
+        });
+        const downloadUrl = response.data.download_url;
+
+        const fileContentResponse = await axios.get(downloadUrl, {
+            headers: {
+                Authorization: `token ${GITHUB_TOKEN}`
+            }
+        });
+
+        const versionData = fileContentResponse.data;
+        return versionData.version;
+    } catch (error) {
+        console.error('Error fetching version:', error);
+        throw new Error('Unable to fetch version from version.json');
+    }
 }

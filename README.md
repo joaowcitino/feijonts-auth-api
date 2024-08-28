@@ -47,11 +47,12 @@ This project is a robust and secure script authentication system designed to man
    Create a `.env` file in the root directory and add the following variables:
 
    ```env
-   DISCORD_TOKEN=your_discord_bot_token
-   MYSQL_HOST=your_mysql_host
-   MYSQL_USER=your_mysql_user
-   MYSQL_PASSWORD=your_mysql_password
-   MYSQL_DATABASE=your_mysql_database
+   BOT_TOKEN=your_discord_bot_token
+   DB_HOST=your_mysql_host
+   DB_USER=your_mysql_user
+   DB_PASSWORD=your_mysql_password
+   DB_NAME=your_mysql_database
+   DB_PORT=your_mysql_port
    ```
 
 5. **Compile the TypeScript files:**
